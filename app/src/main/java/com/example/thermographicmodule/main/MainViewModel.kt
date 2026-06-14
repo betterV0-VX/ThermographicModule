@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.graphics.vector.Path
 import com.example.thermographicmodule.data.UsbRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +21,9 @@ import java.util.Date
 import java.util.Locale
 import kotlin.text.format
 import com.example.thermographicmodule.data.ModeUiState
+import com.example.thermographicmodule.data.ParameterIsChosen
+import com.example.thermographicmodule.data.SectionIsChosen
+import com.example.thermographicmodule.data.SectionType
 import kotlinx.coroutines.flow.update
 
 private const val TAG = "MainViewModel"
@@ -33,9 +37,22 @@ class MainViewModel(
     var histogram by mutableIntStateOf(32)
     var brightness by mutableIntStateOf(128)
 
+    var currentParameterForSlider by mutableStateOf("ГИСТОГРАММА")
+    var continuousSending by mutableStateOf(false)
+
+    var currentSectionName by mutableStateOf("Запросы")
+
     private val _modeUiState = MutableStateFlow(ModeUiState())
 
     val modes: StateFlow<ModeUiState> = _modeUiState.asStateFlow()
+
+    private val _parameterIsChosen = MutableStateFlow(ParameterIsChosen())
+    val parameterIsChosen: StateFlow<ParameterIsChosen> = _parameterIsChosen.asStateFlow()
+
+    private val _sectionIsChosen = MutableStateFlow(SectionIsChosen())
+    val sectionIsChosen: StateFlow<SectionIsChosen> = _sectionIsChosen.asStateFlow()
+
+
 
     var log by mutableStateOf("")
         private set
@@ -45,11 +62,6 @@ class MainViewModel(
 
     private val _availableDevices = MutableStateFlow<List<UsbDevice>>(emptyList())
     val availableDevices: StateFlow<List<UsbDevice>> = _availableDevices.asStateFlow()
-
-    @OptIn(ExperimentalUnsignedTypes::class)
-    private fun sendCommand(command: String, parameter: Int? =null){
-        usbRepository.sendCommand(command, parameter)
-    }
 
     fun refreshDevices(){
         _availableDevices.value = usbRepository.findDevices()
@@ -70,6 +82,96 @@ class MainViewModel(
     }
 
     fun Date.formatTime() = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(this)
+
+    fun setContinuousSendingFlag(value: Boolean){
+        continuousSending = value
+        Log.i(TAG, "setContinuousSending called. New value: $value")
+    }
+
+    fun setParameterForSlider(parameterName: String){
+        currentParameterForSlider = parameterName
+
+        _parameterIsChosen.update { parameterState ->
+//            if (parameterName == "ГИСТОГРАММА") {
+//                parameterState.histogramIsChosen = true
+//            } else if (parameterName == "ЯРКОСТЬ") {
+//                parameterState.brightnessIsChosen = true
+//            } else if (parameterName == "УСИЛЕНИЕ") {
+//                parameterState.gainIsChosen = true
+//            }
+            parameterState.copy(
+                histogramIsChosen = parameterName == "ГИСТОГРАММА",
+                brightnessIsChosen = parameterName == "ЯРКОСТЬ",
+                gainIsChosen = parameterName == "УСИЛЕНИЕ",
+            )
+//            val chosenSection = when (selectedSectionType) {
+//                SectionType.REQUEST -> "Запросы"
+//                SectionType.ROTATION -> "Поворот"
+//                SectionType.ANALYSIS_AREA -> "Зона анализа АРУ"
+//                SectionType.ZOOM_AREA -> "Зона масштабирования"
+//                SectionType.USER_PARAMETER -> "Пользовательские параметры"
+//            }
+//            currentSectionName = chosenSection
+//
+//            sectionState.copy(
+//                requestIsChosen = selectedSectionType == SectionType.REQUEST,
+//                rotationIsChosen = selectedSectionType == SectionType.ROTATION,
+//                analysisAreaIsChosen = selectedSectionType == SectionType.ANALYSIS_AREA,
+//                zoomAreaIsChosen = selectedSectionType == SectionType.ZOOM_AREA,
+//                userParameterIsChosen = selectedSectionType == SectionType.USER_PARAMETER
+//            )
+        }
+    }
+
+    fun getParameterForSlider(): Int {
+        when (currentParameterForSlider) {
+            "ГИСТОГРАММА" -> {
+                return histogram
+            }
+            "ЯРКОСТЬ" -> {
+                return brightness
+            }
+            "УСИЛЕНИЕ" -> {
+                return gain
+            }
+        }
+        return 0
+    }
+
+    fun onValueChangeForSlider(value: Float){
+        when (currentParameterForSlider) {
+            "ГИСТОГРАММА" -> {
+                histogram = value.toInt()
+            }
+            "ЯРКОСТЬ" -> {
+                brightness = value.toInt()
+            }
+            "УСИЛЕНИЕ" -> {
+                gain = value.toInt()
+            }
+        }
+    }
+
+    fun setSectionIsChosen(selectedSectionType: SectionType){
+        _sectionIsChosen.update { sectionState ->
+            val chosenSection = when (selectedSectionType) {
+                SectionType.REQUEST -> "Запросы"
+                SectionType.ROTATION -> "Поворот"
+                SectionType.ANALYSIS_AREA -> "Зона анализа АРУ"
+                SectionType.ZOOM_AREA -> "Зона масштабирования"
+                SectionType.USER_PARAMETER -> "Пользовательские параметры"
+            }
+            currentSectionName = chosenSection
+
+            sectionState.copy(
+                requestIsChosen = selectedSectionType == SectionType.REQUEST,
+                rotationIsChosen = selectedSectionType == SectionType.ROTATION,
+                analysisAreaIsChosen = selectedSectionType == SectionType.ANALYSIS_AREA,
+                zoomAreaIsChosen = selectedSectionType == SectionType.ZOOM_AREA,
+                userParameterIsChosen = selectedSectionType == SectionType.USER_PARAMETER
+            )
+        }
+    }
 
     // Режимы и переключатели
     fun toggleWaiting(value: Boolean){
@@ -426,6 +528,7 @@ class MainViewModel(
     fun setBrightness(value: String){
         val valueInt = value.toIntOrNull() ?: 0
         if (valueInt in 0..254){
+            setParameterForSlider("ЯРКОСТЬ")
             brightness = valueInt
         } else {
             Log.e(TAG, "setBrightness error (value out of bounds)")
@@ -435,6 +538,7 @@ class MainViewModel(
     fun setGain(value: String){
         val valueInt = value.toIntOrNull() ?: 0
         if (valueInt in 0..254){
+            setParameterForSlider("УСИЛЕНИЕ")
             gain = valueInt
         } else {
             Log.e(TAG, "setGain error (value out of bounds)")
@@ -444,6 +548,7 @@ class MainViewModel(
     fun setHistogram(value: String){
         val valueInt = value.toIntOrNull() ?: 0
         if (valueInt in 0..254){
+            setParameterForSlider("ГИСТОГРАММА")
             histogram = valueInt
         } else {
             Log.e(TAG, "setHistogram error (value out of bounds)")
