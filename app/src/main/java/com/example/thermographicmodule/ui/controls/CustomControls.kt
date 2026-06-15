@@ -1,6 +1,6 @@
 package com.example.thermographicmodule.ui.controls
 
-import androidx.compose.foundation.border
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,7 +22,6 @@ import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
@@ -54,11 +53,26 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.thermographicmodule.R
-import com.example.thermographicmodule.data.ParameterIsChosen
 import com.example.thermographicmodule.data.SectionCardData
 import com.example.thermographicmodule.data.SectionIsChosen
 import com.example.thermographicmodule.data.SectionType
+import com.example.thermographicmodule.main.MobileScreen
 import com.example.thermographicmodule.ui.theme.ThermographicModuleTheme
+
+
+@Composable
+fun MessageToUser(@DrawableRes iconResId: Int, message: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            painter = painterResource(iconResId),
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = color
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(message, fontSize = 10.sp, lineHeight = 14.sp, color = color, modifier = Modifier.padding(start = 4.dp, end=16.dp))
+    }
+}
 
 @Composable
 fun ParameterControl(label: String, isChosen: Boolean,  onChosenParameterChange: () -> Unit, value: Int, onValueChange: (String) -> Unit, onSend: () -> Unit) {
@@ -115,7 +129,6 @@ fun ParameterControl(label: String, isChosen: Boolean,  onChosenParameterChange:
                 modifier = Modifier
                     .height(52.dp)
                     .width(90.dp),
-//                    .fillMaxWidth(),
                 textStyle = LocalTextStyle.current.copy(
                     textAlign = TextAlign.Center,
                     fontSize = 14.sp
@@ -312,11 +325,11 @@ fun ZoomSection(selectedZoom: Int, onZoomSelected: (Int) -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SwitchModuleTurnOn(checked: Boolean, onCheckedChange: (Boolean) -> Unit){
+fun SwitchModuleTurnOn(checked: Boolean, onCheckedChange: (Boolean) -> Unit, messageToUser: String){
     Row(verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .padding(start = 24.dp)
-            .fillMaxWidth(1f)) {
+            .fillMaxWidth()) {
         Switch(checked = checked, onCheckedChange = { onCheckedChange(it) },
             thumbContent = if (checked) {
                 {
@@ -337,7 +350,7 @@ fun SwitchModuleTurnOn(checked: Boolean, onCheckedChange: (Boolean) -> Unit){
                 uncheckedTrackColor = MaterialTheme.colorScheme.secondaryContainer,
             ),
             modifier = Modifier.size(50.dp))
-        Spacer(Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(8.dp))
         if (checked){
             Text("Подключен",
                 color = MaterialTheme.colorScheme.primary,
@@ -346,6 +359,14 @@ fun SwitchModuleTurnOn(checked: Boolean, onCheckedChange: (Boolean) -> Unit){
             Text("Отключен",
                 color = MaterialTheme.colorScheme.secondary,
                 fontWeight = FontWeight.Bold)
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        if (messageToUser != "") {
+            MessageToUser(
+                R.drawable.outline_frame_exclamation_24,
+                message = messageToUser,
+                color = Color.Yellow
+            )
         }
     }
 }

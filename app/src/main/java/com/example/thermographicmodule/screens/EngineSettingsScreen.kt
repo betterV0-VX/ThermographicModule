@@ -18,7 +18,7 @@ fun EngineSettingsScreen(){
             Log.i(TAG, " called")
         },
             modifier = Modifier.fillMaxWidth()) {
-            Text("Настройки двигателя")
+            Text("Настройки НТМ Модуля")
         }
     }
 

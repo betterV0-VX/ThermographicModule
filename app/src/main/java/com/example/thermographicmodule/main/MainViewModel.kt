@@ -1,25 +1,19 @@
 package com.example.thermographicmodule.main
 
-import android.R
 import android.hardware.usb.UsbDevice
-import android.os.Build
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.ui.graphics.vector.Path
 import com.example.thermographicmodule.data.UsbRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.text.SimpleDateFormat
-import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
-import kotlin.text.format
 import com.example.thermographicmodule.data.ModeUiState
 import com.example.thermographicmodule.data.ParameterIsChosen
 import com.example.thermographicmodule.data.SectionIsChosen
@@ -31,6 +25,9 @@ class MainViewModel(
     private val usbRepository: UsbRepository,
 ) : ViewModel() {
 
+    var messageToUser by mutableStateOf("COM-порт не выбран.\nИнтерфейс заблокирован.")
+
+    var joystickIsVisible by mutableStateOf(false)
     var isModuleOn by mutableStateOf(false)
     var currentZoom by mutableIntStateOf(1)
     var gain by mutableIntStateOf(100)
@@ -43,7 +40,6 @@ class MainViewModel(
     var currentSectionName by mutableStateOf("Запросы")
 
     private val _modeUiState = MutableStateFlow(ModeUiState())
-
     val modes: StateFlow<ModeUiState> = _modeUiState.asStateFlow()
 
     private val _parameterIsChosen = MutableStateFlow(ParameterIsChosen())
@@ -51,8 +47,6 @@ class MainViewModel(
 
     private val _sectionIsChosen = MutableStateFlow(SectionIsChosen())
     val sectionIsChosen: StateFlow<SectionIsChosen> = _sectionIsChosen.asStateFlow()
-
-
 
     var log by mutableStateOf("")
         private set
@@ -79,47 +73,25 @@ class MainViewModel(
     fun disconnect(){
         usbRepository.disconnect()
         currentConnectedComPortNumber = -1
+        messageToUser = "COM-порт не выбран.\nИнтерфейс заблокирован."
     }
 
-    fun Date.formatTime() = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(this)
+    fun Date.formatTime(): String = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(this)
 
-    fun setContinuousSendingFlag(value: Boolean){
+    fun setContinuousSendingFlag(value: Boolean) {
         continuousSending = value
+        log += "${Date().formatTime()} : Continuous sending is ${if (value) "ON" else "OFF"}\n"
         Log.i(TAG, "setContinuousSending called. New value: $value")
     }
 
-    fun setParameterForSlider(parameterName: String){
+    fun setParameterForSlider(parameterName: String) {
         currentParameterForSlider = parameterName
-
         _parameterIsChosen.update { parameterState ->
-//            if (parameterName == "ГИСТОГРАММА") {
-//                parameterState.histogramIsChosen = true
-//            } else if (parameterName == "ЯРКОСТЬ") {
-//                parameterState.brightnessIsChosen = true
-//            } else if (parameterName == "УСИЛЕНИЕ") {
-//                parameterState.gainIsChosen = true
-//            }
             parameterState.copy(
                 histogramIsChosen = parameterName == "ГИСТОГРАММА",
                 brightnessIsChosen = parameterName == "ЯРКОСТЬ",
                 gainIsChosen = parameterName == "УСИЛЕНИЕ",
             )
-//            val chosenSection = when (selectedSectionType) {
-//                SectionType.REQUEST -> "Запросы"
-//                SectionType.ROTATION -> "Поворот"
-//                SectionType.ANALYSIS_AREA -> "Зона анализа АРУ"
-//                SectionType.ZOOM_AREA -> "Зона масштабирования"
-//                SectionType.USER_PARAMETER -> "Пользовательские параметры"
-//            }
-//            currentSectionName = chosenSection
-//
-//            sectionState.copy(
-//                requestIsChosen = selectedSectionType == SectionType.REQUEST,
-//                rotationIsChosen = selectedSectionType == SectionType.ROTATION,
-//                analysisAreaIsChosen = selectedSectionType == SectionType.ANALYSIS_AREA,
-//                zoomAreaIsChosen = selectedSectionType == SectionType.ZOOM_AREA,
-//                userParameterIsChosen = selectedSectionType == SectionType.USER_PARAMETER
-//            )
         }
     }
 
@@ -138,21 +110,41 @@ class MainViewModel(
         return 0
     }
 
-    fun onValueChangeForSlider(value: Float){
+    fun onValueChangeForSlider(value: Float) {
         when (currentParameterForSlider) {
             "ГИСТОГРАММА" -> {
                 histogram = value.toInt()
+                if (continuousSending)
+                    sendHistogram()
             }
             "ЯРКОСТЬ" -> {
                 brightness = value.toInt()
+                if (continuousSending)
+                    sendBrightness()
             }
             "УСИЛЕНИЕ" -> {
                 gain = value.toInt()
+                if (continuousSending)
+                    sendGain()
             }
         }
     }
 
-    fun setSectionIsChosen(selectedSectionType: SectionType){
+    fun sendParameter(){
+        when (currentParameterForSlider) {
+            "ГИСТОГРАММА" -> {
+                sendHistogram()
+            }
+            "ЯРКОСТЬ" -> {
+                sendBrightness()
+            }
+            "УСИЛЕНИЕ" -> {
+                sendGain()
+            }
+        }
+    }
+
+    fun setSectionIsChosen(selectedSectionType: SectionType) {
         _sectionIsChosen.update { sectionState ->
             val chosenSection = when (selectedSectionType) {
                 SectionType.REQUEST -> "Запросы"
@@ -177,6 +169,7 @@ class MainViewModel(
     fun toggleWaiting(value: Boolean){
         if (currentConnectedComPortNumber == -1) {
             log += "${Date().formatTime()} : Waiting is disabled. COM-port not selected\n"
+            messageToUser = "COM-порт не выбран.\nИнтерфейс заблокирован."
             return
         }
         val commandWasSent: Boolean = if (value){
@@ -208,6 +201,7 @@ class MainViewModel(
     fun toggleBinning(value: Boolean){
         if (currentConnectedComPortNumber == -1) {
             log += "${Date().formatTime()} : Binning is disabled. COM-port not selected\n"
+            messageToUser = "COM-порт не выбран.\nИнтерфейс заблокирован."
             return
         }
         val commandWasSent: Boolean = if (value){
@@ -239,6 +233,7 @@ class MainViewModel(
     fun toggleAutoBinning(value: Boolean){
         if (currentConnectedComPortNumber == -1) {
             log += "${Date().formatTime()} : Auto binning is disabled. COM-port not selected\n"
+            messageToUser = "COM-порт не выбран.\nИнтерфейс заблокирован."
             return
         }
         val commandWasSent: Boolean = if (value){
@@ -270,6 +265,7 @@ class MainViewModel(
     fun toggleAlc(value: Boolean){
         if (currentConnectedComPortNumber == -1) {
             log += "${Date().formatTime()} : ALC is disabled. COM-port not selected\n"
+            messageToUser = "COM-порт не выбран.\nИнтерфейс заблокирован."
             return
         }
         val commandWasSent: Boolean = if (value){
@@ -301,6 +297,7 @@ class MainViewModel(
     fun toggleAlcBorder(value: Boolean){
         if (currentConnectedComPortNumber == -1) {
             log += "${Date().formatTime()} : ALC border is disabled. COM-port not selected\n"
+            messageToUser = "COM-порт не выбран.\nИнтерфейс заблокирован."
             return
         }
         val commandWasSent: Boolean = if (value){
@@ -332,6 +329,7 @@ class MainViewModel(
     fun toggleFpsSlowdown(value: Boolean){
         if (currentConnectedComPortNumber == -1) {
             log += "${Date().formatTime()} : FPS slowdown is disabled. COM-port not selected\n"
+            messageToUser = "COM-порт не выбран.\nИнтерфейс заблокирован."
             return
         }
         val commandWasSent: Boolean = if (value){
@@ -363,6 +361,7 @@ class MainViewModel(
     fun toggleAutoFpsSlowdown(value: Boolean){
         if (currentConnectedComPortNumber == -1) {
             log += "${Date().formatTime()} : Auto FPS slowdown is disabled. COM-port not selected\n"
+            messageToUser = "COM-порт не выбран.\nИнтерфейс заблокирован."
             return
         }
         val commandWasSent: Boolean = if (value){
@@ -394,6 +393,7 @@ class MainViewModel(
     fun togglePolarityInversion(value: Boolean) {
         if (currentConnectedComPortNumber == -1) {
             log += "${Date().formatTime()} : Polarity inversion is disabled. COM-port not selected\n"
+            messageToUser = "COM-порт не выбран.\nИнтерфейс заблокирован."
             return
         }
         val commandWasSent: Boolean = if (value){
@@ -425,6 +425,7 @@ class MainViewModel(
     fun toggleCorrection(value: Boolean){
         if (currentConnectedComPortNumber == -1) {
             log += "${Date().formatTime()} : Correction is disabled. COM-port not selected\n"
+            messageToUser = "COM-порт не выбран.\nИнтерфейс заблокирован."
             return
         }
         val commandWasSent: Boolean = if (value){
@@ -438,7 +439,6 @@ class MainViewModel(
             }
         }
     }
-
     fun sendCorrectionOn(): Boolean{
         if (!logIsComPortConnected())
             return false
@@ -446,7 +446,6 @@ class MainViewModel(
         log += "${Date().formatTime()} : Command BLIND_CORRECTION_ON send\n"
         return true
     }
-
     fun sendCorrectionOff(): Boolean{
         if (!logIsComPortConnected())
             return false
@@ -457,7 +456,7 @@ class MainViewModel(
 
 
     // Режимы и переключатели
-    // _________________________________________
+    // __________________________________________________________________
 
     fun clearLog(){
         log = ""
@@ -482,13 +481,16 @@ class MainViewModel(
     fun toggleModuleOn(value: Boolean? = null) {
         if (currentConnectedComPortNumber == -1) {
             log += "${Date().formatTime()} : Module On/off is disabled. COM-port not selected\n"
+            messageToUser = "COM-порт не выбран.\nИнтерфейс заблокирован."
             return
         }
         isModuleOn = !isModuleOn
         if (isModuleOn){
             sendStreamOn()
+            messageToUser = ""
         } else {
             sendStreamOff()
+            messageToUser = ""
         }
     }
 

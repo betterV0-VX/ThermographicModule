@@ -1,6 +1,13 @@
 package com.example.thermographicmodule.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -26,7 +33,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,9 +50,12 @@ import com.example.thermographicmodule.data.SectionCardData
 import com.example.thermographicmodule.data.SectionType
 import com.example.thermographicmodule.main.MainViewModel
 import com.example.thermographicmodule.ui.controls.CompoundSlider
+import com.example.thermographicmodule.ui.controls.JoystickPanel
+import com.example.thermographicmodule.ui.controls.MessageToUser
 import com.example.thermographicmodule.ui.controls.ParameterControl
 import com.example.thermographicmodule.ui.controls.SectionCarousel
 import com.example.thermographicmodule.ui.controls.SendButton
+import com.example.thermographicmodule.ui.controls.SimpleJoystick
 import com.example.thermographicmodule.ui.controls.SwitchModuleTurnOn
 import com.example.thermographicmodule.ui.controls.ToggleButton
 import com.example.thermographicmodule.ui.controls.ToggleContinuousButton
@@ -58,199 +71,329 @@ fun ThermographicModuleScreen(viewModel: MainViewModel){
     val chosenSections = viewModel.sectionIsChosen.collectAsState()
     val chosenParameter = viewModel.parameterIsChosen.collectAsState()
 
-    Column(
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.verticalScroll(rememberScrollState())
-    ) {
-        SwitchModuleTurnOn(viewModel.isModuleOn, viewModel::toggleModuleOn)
-        Spacer(modifier = Modifier.height(8.dp))
-        HorizontalDivider(Modifier.height(10.dp))
-        Text("Параметры", color=Color.LightGray,
-            fontWeight = FontWeight.Light,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 8.dp, bottom = 4.dp)
-        )
+    var joystickX by remember { mutableStateOf(0f) }
+    var joystickY by remember { mutableStateOf(0f) }
 
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)){
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .wrapContentHeight()
-                    .clip(RectangleShape)
-                    .padding(top = 0.dp, bottom = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+    Box(modifier = Modifier.fillMaxSize()) {
+//        Column(
+//            modifier = Modifier
+//                .fillMaxSize()
+//                // Убираем нижний отступ, если джойстик виден
+//                .padding(bottom = if (viewModel.joystickIsVisible) 0.dp else 0.dp)
+//        ) {
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.verticalScroll(rememberScrollState())
+//                modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())
             ) {
-                item { ParameterControl(
-                    "ГИСТОГРАММА",
-                    isChosen = chosenParameter.value.histogramIsChosen,
-                    { viewModel.setParameterForSlider("ГИСТОГРАММА")},
-                    viewModel.histogram,
-                    viewModel::setHistogram,
-                    viewModel::sendHistogram)}
-                item { ParameterControl(
-                    "ЯРКОСТЬ",
-                    isChosen = chosenParameter.value.brightnessIsChosen,
-                    { viewModel.setParameterForSlider("ЯРКОСТЬ")},
-                    viewModel.brightness,
-                    viewModel::setBrightness,
-                    viewModel::sendBrightness)}
-                item { ParameterControl(
-                    "УСИЛЕНИЕ",
-                    isChosen = chosenParameter.value.gainIsChosen,
-                    { viewModel.setParameterForSlider("УСИЛЕНИЕ")},
-                    viewModel.gain,
-                    viewModel::setGain,
-                    viewModel::sendGain)}
-            }
-        }
-
-        CompoundSlider(viewModel.currentParameterForSlider, viewModel.getParameterForSlider(), viewModel::onValueChangeForSlider,0f..254f)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)){
-            ToggleContinuousButton(viewModel.continuousSending, "Непрерывная отправка: ВКЛ",
-                "Непрерывная отправка: выкл", viewModel::setContinuousSendingFlag, modifier = Modifier.weight(2.2f))
-            SendButton(onSend={}, modifier = Modifier.weight(1f) )
-        }
-        ZoomSection(viewModel.currentZoom, viewModel::setZoom)
-        Spacer(modifier = Modifier.height(12.dp))
-        val items = remember {
-            listOf(
-                SectionCardData("Запросы", R.drawable.outline_terminal_2_24, sectionType = SectionType.REQUEST),
-                SectionCardData("Поворот", R.drawable.outline_flip_camera_android_24, sectionType = SectionType.ROTATION),
-                SectionCardData("Зона анализа АРУ", R.drawable.outline_activity_zone_24, sectionType = SectionType.ANALYSIS_AREA),
-                SectionCardData("Зона масштабирования", R.drawable.outline_feature_search_24, sectionType = SectionType.ZOOM_AREA),
-                SectionCardData("Пользователькие параметры", R.drawable.outline_settings_account_box_24, sectionType = SectionType.USER_PARAMETER)
-            )
-        }
-        Text("Разделы", color=Color.LightGray,
-            fontWeight = FontWeight.Light,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 8.dp)
-        )
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)){
-            SectionCarousel(chosenSections.value, items, viewModel::setSectionIsChosen)
-        }
-        Card(modifier = Modifier.padding(start = 8.dp, end = 8.dp),
-            shape = RoundedCornerShape(topEnd = 12.dp, topStart = 0.dp, bottomEnd = 12.dp, bottomStart = 12.dp)) {
-            Column(modifier = Modifier.height(200.dp).fillMaxWidth()) {
-                Text(viewModel.currentSectionName, modifier = Modifier.padding(10.dp))
-            }
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(20.dp)) {
-            Button(
-                onClick = viewModel::startBlindCalibration,
-                shape = RoundedCornerShape(4.dp),
-                modifier = Modifier.size(128.dp, 54.dp),
-                contentPadding = PaddingValues(8.dp),
-                colors = ButtonDefaults.filledTonalButtonColors()
-            ) {
-                Text("Калибровка по шторке")
-            }
-
-            Button(
-                onClick = viewModel::startCapCalibration,
-                shape = RoundedCornerShape(4.dp),
-                modifier = Modifier.size(128.dp, 54.dp),
-                contentPadding = PaddingValues(8.dp),
-                colors = ButtonDefaults.filledTonalButtonColors()
-            ) {
-                Text("Калибровка по крышке")
-            }
-
-            Button(
-                onClick = viewModel::findDefectPixels,
-                shape = RoundedCornerShape(4.dp),
-                modifier = Modifier.size(128.dp, 54.dp),
-                contentPadding = PaddingValues(8.dp),
-                colors = ButtonDefaults.filledTonalButtonColors()
-            ) {
-                Text("Нахождение битых пикселей")
-            }
-        }
-        Text("Режимы (вкл/выкл)", color=Color.LightGray,
-            fontWeight = FontWeight.Light,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 8.dp)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Card(modifier = Modifier.padding(start = 8.dp, end = 8.dp)) {
-            FlowRow(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                ToggleButton(
-                    modes.value.waiting, "Режим ожидания",
-                    "Режим ожидания",
-                    viewModel::toggleWaiting,
-                )
-                ToggleButton(
-                    modes.value.binning, "Биннинг", "Биннинг",
-                    viewModel::toggleBinning,
-                )
-                ToggleButton(
-                    modes.value.autoBinning, "Автобиннинг", "Автобиннинг",
-                    viewModel::toggleAutoBinning,
-                )
-                ToggleButton(
-                    modes.value.alc, "ALC", "ALC",
-                    viewModel::toggleAlc,
-                )
-                ToggleButton(
-                    modes.value.alcBorder, "Граница ALC",
-                    "Граница ALC",
-                    viewModel::toggleAlcBorder,
-                )
-                ToggleButton(
-                    modes.value.fpsSlowdown, "Замедление FPS",
-                    "Замедление FPS",
-                    viewModel::toggleFpsSlowdown,
-                )
-                ToggleButton(
-                    modes.value.autoFpsSlowdown, "Автозамедление FPS",
-                    "Автозамедление FPS",
-                    viewModel::toggleAutoFpsSlowdown,
-                )
-                ToggleButton(
-                    modes.value.polarityInversion, "Инверсия полярности",
-                    "Инверсия полярности",
-                    viewModel::togglePolarityInversion,
-                )
-                ToggleButton(
-                    modes.value.correction, "Коррекция",
-                    "Коррекция",
-                    viewModel::toggleCorrection,
+                Row {
+                    SwitchModuleTurnOn(
+                        viewModel.isModuleOn,
+                        viewModel::toggleModuleOn,
+                        viewModel.messageToUser
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(Modifier.height(10.dp))
+                Text(
+                    "Параметры", color = Color.LightGray,
+                    fontWeight = FontWeight.Light,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 8.dp, bottom = 4.dp)
                 )
 
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp)
+                ) {
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+                            .clip(RectangleShape)
+                            .padding(top = 0.dp, bottom = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        item {
+                            ParameterControl(
+                                "ГИСТОГРАММА",
+                                isChosen = chosenParameter.value.histogramIsChosen,
+                                { viewModel.setParameterForSlider("ГИСТОГРАММА") },
+                                viewModel.histogram,
+                                viewModel::setHistogram,
+                                viewModel::sendHistogram
+                            )
+                        }
+                        item {
+                            ParameterControl(
+                                "ЯРКОСТЬ",
+                                isChosen = chosenParameter.value.brightnessIsChosen,
+                                { viewModel.setParameterForSlider("ЯРКОСТЬ") },
+                                viewModel.brightness,
+                                viewModel::setBrightness,
+                                viewModel::sendBrightness
+                            )
+                        }
+                        item {
+                            ParameterControl(
+                                "УСИЛЕНИЕ",
+                                isChosen = chosenParameter.value.gainIsChosen,
+                                { viewModel.setParameterForSlider("УСИЛЕНИЕ") },
+                                viewModel.gain,
+                                viewModel::setGain,
+                                viewModel::sendGain
+                            )
+                        }
+                    }
+                }
 
-            }
-        }
-        TextButton(onClick = viewModel::saveParametersToHardware) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(1f).padding(10.dp)
-            ) {
-                Spacer(modifier = Modifier.fillMaxWidth(0.5f))
-                Icon(
-                    painterResource(
-                        R.drawable.outline_save_24
+                CompoundSlider(
+                    viewModel.currentParameterForSlider,
+                    viewModel.getParameterForSlider(),
+                    viewModel::onValueChangeForSlider,
+                    0f..254f
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(
+                        8.dp,
+                        Alignment.CenterHorizontally
                     ),
-                    contentDescription = null,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp)
+                ) {
+                    ToggleContinuousButton(
+                        viewModel.continuousSending,
+                        "Непрерывная отправка: ВКЛ",
+                        "Непрерывная отправка: выкл",
+                        viewModel::setContinuousSendingFlag,
+                        modifier = Modifier.weight(2.2f)
+                    )
+                    SendButton(onSend = viewModel::sendParameter, modifier = Modifier.weight(1f))
+                }
+                ZoomSection(viewModel.currentZoom, viewModel::setZoom)
+                Spacer(modifier = Modifier.height(12.dp))
+                val items = remember {
+                    listOf(
+                        SectionCardData(
+                            "Запросы",
+                            R.drawable.outline_terminal_2_24,
+                            sectionType = SectionType.REQUEST
+                        ),
+                        SectionCardData(
+                            "Поворот",
+                            R.drawable.outline_flip_camera_android_24,
+                            sectionType = SectionType.ROTATION
+                        ),
+                        SectionCardData(
+                            "Зона анализа АРУ",
+                            R.drawable.outline_activity_zone_24,
+                            sectionType = SectionType.ANALYSIS_AREA
+                        ),
+                        SectionCardData(
+                            "Зона масштабирования",
+                            R.drawable.outline_feature_search_24,
+                            sectionType = SectionType.ZOOM_AREA
+                        ),
+                        SectionCardData(
+                            "Пользователькие параметры",
+                            R.drawable.outline_settings_account_box_24,
+                            sectionType = SectionType.USER_PARAMETER
+                        )
+                    )
+                }
+                Text(
+                    "Разделы", color = Color.LightGray,
+                    fontWeight = FontWeight.Light,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 8.dp)
                 )
-                Text(" Сохранение параметров")
-            }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp)
+                ) {
+                    SectionCarousel(chosenSections.value, items, viewModel::setSectionIsChosen)
+                }
+                Card(
+                    modifier = Modifier.padding(start = 8.dp, end = 8.dp),
+                    shape = RoundedCornerShape(
+                        topEnd = 12.dp,
+                        topStart = 0.dp,
+                        bottomEnd = 12.dp,
+                        bottomStart = 12.dp
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .height(200.dp)
+                            .fillMaxWidth()
+                    ) {
+                        Text(viewModel.currentSectionName, modifier = Modifier.padding(10.dp))
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    "Другие команды", color = Color.LightGray,
+                    fontWeight = FontWeight.Light,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 8.dp)
+                )
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(
+                        start = 20.dp,
+                        end = 20.dp,
+                        bottom = 20.dp,
+                        top = 8.dp
+                    )
+                ) {
+                    item {
+                        Button(
+                            onClick = viewModel::startBlindCalibration,
+                            shape = RoundedCornerShape(4.dp),
+                            modifier = Modifier.size(128.dp, 54.dp),
+                            contentPadding = PaddingValues(8.dp),
+                            colors = ButtonDefaults.filledTonalButtonColors()
+                        ) {
+                            Text("Калибровка по шторке")
+                        }
+                    }
+                    item {
+                        Button(
+                            onClick = viewModel::startCapCalibration,
+                            shape = RoundedCornerShape(4.dp),
+                            modifier = Modifier.size(128.dp, 54.dp),
+                            contentPadding = PaddingValues(8.dp),
+                            colors = ButtonDefaults.filledTonalButtonColors()
+                        ) {
+                            Text("Калибровка по крышке")
+                        }
+                    }
+                    item {
+                        Button(
+                            onClick = viewModel::findDefectPixels,
+                            shape = RoundedCornerShape(4.dp),
+                            modifier = Modifier.size(128.dp, 54.dp),
+                            contentPadding = PaddingValues(8.dp),
+                            colors = ButtonDefaults.filledTonalButtonColors()
+                        ) {
+                            Text("Нахождение битых пикселей")
+                        }
+                    }
+                }
+                Text(
+                    "Режимы (вкл/выкл)", color = Color.LightGray,
+                    fontWeight = FontWeight.Light,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 8.dp)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Card(modifier = Modifier.padding(start = 8.dp, end = 8.dp)) {
+                    FlowRow(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ToggleButton(
+                            modes.value.waiting, "Режим ожидания",
+                            "Режим ожидания",
+                            viewModel::toggleWaiting,
+                        )
+                        ToggleButton(
+                            modes.value.binning, "Биннинг", "Биннинг",
+                            viewModel::toggleBinning,
+                        )
+                        ToggleButton(
+                            modes.value.autoBinning, "Автобиннинг", "Автобиннинг",
+                            viewModel::toggleAutoBinning,
+                        )
+                        ToggleButton(
+                            modes.value.alc, "ALC", "ALC",
+                            viewModel::toggleAlc,
+                        )
+                        ToggleButton(
+                            modes.value.alcBorder, "Граница ALC",
+                            "Граница ALC",
+                            viewModel::toggleAlcBorder,
+                        )
+                        ToggleButton(
+                            modes.value.fpsSlowdown, "Замедление FPS",
+                            "Замедление FPS",
+                            viewModel::toggleFpsSlowdown,
+                        )
+                        ToggleButton(
+                            modes.value.autoFpsSlowdown, "Автозамедление FPS",
+                            "Автозамедление FPS",
+                            viewModel::toggleAutoFpsSlowdown,
+                        )
+                        ToggleButton(
+                            modes.value.polarityInversion, "Инверсия полярности",
+                            "Инверсия полярности",
+                            viewModel::togglePolarityInversion,
+                        )
+                        ToggleButton(
+                            modes.value.correction, "Коррекция",
+                            "Коррекция",
+                            viewModel::toggleCorrection,
+                        )
 
-        }
+
+                    }
+                }
+                TextButton(onClick = viewModel::saveParametersToHardware) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth(1f)
+                            .padding(10.dp)
+                    ) {
+                        Spacer(modifier = Modifier.weight(1f))
+                        Icon(
+                            painterResource(
+                                R.drawable.outline_save_24
+                            ),
+                            contentDescription = null,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Text("Сохранение параметров")
+                    }
+
+                }
+                Spacer(modifier = Modifier.height(if (viewModel.joystickIsVisible) 250.dp else 80.dp))
+            }
+//        }
+
+        AnimatedVisibility(
+                visible = viewModel.joystickIsVisible,
+        enter = slideInVertically(
+            initialOffsetY = { it },
+            animationSpec = tween(300)
+        ) + fadeIn(),
+        exit = slideOutVertically(
+            targetOffsetY = { it },
+            animationSpec = tween(300)
+        ) + fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+        JoystickPanel(
+            onJoystickMove = { x, y ->
+                joystickX = x
+                joystickY = y
+                // Отправляем координаты на управление
+                println("Joystick: X=$x, Y=$y")
+            }
+        )
+    }
     }
 
 }

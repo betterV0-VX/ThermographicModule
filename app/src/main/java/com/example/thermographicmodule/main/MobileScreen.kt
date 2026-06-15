@@ -10,13 +10,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Usb
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
@@ -35,8 +39,8 @@ import com.example.thermographicmodule.ui.theme.ThermographicModuleTheme
 
 
 sealed class Screen(val route: String, val title: String, val  iconId: Int) {
-    object Camera : Screen("Тепловизионный модуль", "Камера", R.drawable.camera_video_24px)
-    object Motors : Screen("Двигатели", "Двигатели", R.drawable.motion_sensor_active_24px)
+    object Camera : Screen("Тепловизор", "Тепловизор", R.drawable.camera_video_24px)
+    object Motors : Screen("НТМ Модуль", "НТМ Модуль", R.drawable.motion_sensor_active_24px)
     object Debug : Screen("Отладка", "Отладка", R.drawable.developer_mode_tv_24px)
 }
 
@@ -109,6 +113,28 @@ fun MobileScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                         label = {Text(screen.title)}
                     )
                 }
+            }
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { viewModel.joystickIsVisible = !viewModel.joystickIsVisible},
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.padding(0.dp)
+                    .then(if (viewModel.joystickIsVisible) { Modifier.size(30.dp) } else Modifier) ,
+                containerColor = if (!viewModel.joystickIsVisible) { MaterialTheme.colorScheme.primaryContainer } else {
+                    Color(0xff21222B)
+                },
+                contentColor = if (!viewModel.joystickIsVisible) { MaterialTheme.colorScheme.onPrimaryContainer } else {
+                    Color.Gray
+                },
+            ) {
+                Icon(
+                    painter = if (!viewModel.joystickIsVisible) { painterResource(R.drawable.outline_joystick_24) } else {
+                        painterResource(R.drawable.outline_close_24)
+                    },
+                    contentDescription = if (!viewModel.joystickIsVisible) { "Открыть джойстик"} else {"Закрыть джойстик"},
+                    modifier = Modifier.then(if (viewModel.joystickIsVisible) { Modifier.size(24.dp) } else Modifier.size(32.dp))
+                )
             }
         }
     ) { innerPadding ->
