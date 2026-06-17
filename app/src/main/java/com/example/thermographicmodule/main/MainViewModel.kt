@@ -7,6 +7,15 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import android.util.Log
 import androidx.compose.runtime.mutableIntStateOf
+import com.example.thermographicmodule.Constants.DEFAULT_COM_PORT
+import com.example.thermographicmodule.Constants.DEFAULT_ZOOM
+import com.example.thermographicmodule.Constants.DEFAULT_HISTOGRAM
+import com.example.thermographicmodule.Constants.DEFAULT_GAIN
+import com.example.thermographicmodule.Constants.DEFAULT_BRIGHTNESS
+import com.example.thermographicmodule.Constants.HISTOGRAM_NAME
+import com.example.thermographicmodule.Constants.GAIN_NAME
+import com.example.thermographicmodule.Constants.BRIGHTNESS_NAME
+import com.example.thermographicmodule.Constants.DEFAULT_SECTION_NAME
 import com.example.thermographicmodule.data.UsbRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +29,9 @@ import com.example.thermographicmodule.data.SectionIsChosen
 import com.example.thermographicmodule.data.SectionType
 import kotlinx.coroutines.flow.update
 
+
 private const val TAG = "MainViewModel"
+
 class MainViewModel(
     private val usbRepository: UsbRepository,
 ) : ViewModel() {
@@ -29,15 +40,15 @@ class MainViewModel(
 
     var joystickIsVisible by mutableStateOf(false)
     var isModuleOn by mutableStateOf(false)
-    var currentZoom by mutableIntStateOf(1)
-    var gain by mutableIntStateOf(100)
-    var histogram by mutableIntStateOf(32)
-    var brightness by mutableIntStateOf(128)
+    var currentZoom by mutableIntStateOf(DEFAULT_ZOOM)
+    var gain by mutableIntStateOf(DEFAULT_GAIN)
+    var histogram by mutableIntStateOf(DEFAULT_HISTOGRAM)
+    var brightness by mutableIntStateOf(DEFAULT_BRIGHTNESS)
 
-    var currentParameterForSlider by mutableStateOf("ГИСТОГРАММА")
+    var currentParameterForSlider by mutableStateOf(HISTOGRAM_NAME)
     var continuousSending by mutableStateOf(false)
 
-    var currentSectionName by mutableStateOf("Запросы")
+    var currentSectionName by mutableStateOf(DEFAULT_SECTION_NAME)
 
     private val _modeUiState = MutableStateFlow(ModeUiState())
     val modes: StateFlow<ModeUiState> = _modeUiState.asStateFlow()
@@ -51,7 +62,7 @@ class MainViewModel(
     var log by mutableStateOf("")
         private set
 
-    var currentConnectedComPortNumber by mutableIntStateOf(-1)
+    var currentConnectedComPortNumber by mutableIntStateOf(DEFAULT_COM_PORT)
         private set
 
     private val _availableDevices = MutableStateFlow<List<UsbDevice>>(emptyList())
@@ -88,22 +99,22 @@ class MainViewModel(
         currentParameterForSlider = parameterName
         _parameterIsChosen.update { parameterState ->
             parameterState.copy(
-                histogramIsChosen = parameterName == "ГИСТОГРАММА",
-                brightnessIsChosen = parameterName == "ЯРКОСТЬ",
-                gainIsChosen = parameterName == "УСИЛЕНИЕ",
+                histogramIsChosen = parameterName == HISTOGRAM_NAME,
+                brightnessIsChosen = parameterName == BRIGHTNESS_NAME,
+                gainIsChosen = parameterName == GAIN_NAME,
             )
         }
     }
 
     fun getParameterForSlider(): Int {
         when (currentParameterForSlider) {
-            "ГИСТОГРАММА" -> {
+            HISTOGRAM_NAME -> {
                 return histogram
             }
-            "ЯРКОСТЬ" -> {
+            BRIGHTNESS_NAME -> {
                 return brightness
             }
-            "УСИЛЕНИЕ" -> {
+            GAIN_NAME -> {
                 return gain
             }
         }
@@ -112,17 +123,17 @@ class MainViewModel(
 
     fun onValueChangeForSlider(value: Float) {
         when (currentParameterForSlider) {
-            "ГИСТОГРАММА" -> {
+            HISTOGRAM_NAME -> {
                 histogram = value.toInt()
                 if (continuousSending)
                     sendHistogram()
             }
-            "ЯРКОСТЬ" -> {
+            BRIGHTNESS_NAME -> {
                 brightness = value.toInt()
                 if (continuousSending)
                     sendBrightness()
             }
-            "УСИЛЕНИЕ" -> {
+            GAIN_NAME -> {
                 gain = value.toInt()
                 if (continuousSending)
                     sendGain()
@@ -132,13 +143,13 @@ class MainViewModel(
 
     fun sendParameter(){
         when (currentParameterForSlider) {
-            "ГИСТОГРАММА" -> {
+            HISTOGRAM_NAME -> {
                 sendHistogram()
             }
-            "ЯРКОСТЬ" -> {
+            BRIGHTNESS_NAME -> {
                 sendBrightness()
             }
-            "УСИЛЕНИЕ" -> {
+            GAIN_NAME -> {
                 sendGain()
             }
         }
@@ -163,6 +174,10 @@ class MainViewModel(
                 userParameterIsChosen = selectedSectionType == SectionType.USER_PARAMETER
             )
         }
+    }
+
+    fun toggleJoystickIsVisible(){
+        joystickIsVisible = !joystickIsVisible
     }
 
     // Режимы и переключатели
@@ -527,30 +542,59 @@ class MainViewModel(
         }
     }
 
+    fun setDefaultParameter(){
+        when (currentParameterForSlider) {
+            HISTOGRAM_NAME -> {
+                setDefaultHistogram()
+            }
+            BRIGHTNESS_NAME -> {
+                setDefaultBrightness()
+            }
+            GAIN_NAME -> {
+                setDefaultGain()
+            }
+        }
+    }
+
+    fun setDefaultBrightness(){
+        brightness = 128
+        Log.e(TAG, "Default brightness value is set")
+    }
+
     fun setBrightness(value: String){
         val valueInt = value.toIntOrNull() ?: 0
         if (valueInt in 0..254){
-            setParameterForSlider("ЯРКОСТЬ")
+            setParameterForSlider(BRIGHTNESS_NAME)
             brightness = valueInt
         } else {
             Log.e(TAG, "setBrightness error (value out of bounds)")
         }
     }
 
+    fun setDefaultGain(){
+        gain = 100
+        Log.e(TAG, "Default gain value is set")
+    }
+
     fun setGain(value: String){
         val valueInt = value.toIntOrNull() ?: 0
         if (valueInt in 0..254){
-            setParameterForSlider("УСИЛЕНИЕ")
+            setParameterForSlider(GAIN_NAME)
             gain = valueInt
         } else {
             Log.e(TAG, "setGain error (value out of bounds)")
         }
     }
 
+    fun setDefaultHistogram(){
+        histogram = 32
+        Log.e(TAG, "Default histogram value is set")
+    }
+
     fun setHistogram(value: String){
         val valueInt = value.toIntOrNull() ?: 0
         if (valueInt in 0..254){
-            setParameterForSlider("ГИСТОГРАММА")
+            setParameterForSlider(HISTOGRAM_NAME)
             histogram = valueInt
         } else {
             Log.e(TAG, "setHistogram error (value out of bounds)")

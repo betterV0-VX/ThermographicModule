@@ -58,15 +58,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-//@Composable
-//fun ForceDarkTheme(content: @Composable () -> Unit) {
-//    // Всегда используем темную тему, игнорируя isSystemInDarkTheme()
-//    MaterialTheme(
-//        colorScheme = darkColorScheme(),
-//        content = content
-//    )
-//}
-
 class MainViewModelFactory(private val usbSerialManager: UsbSerialManager)
     : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

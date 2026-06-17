@@ -20,6 +20,8 @@ import com.example.thermographicmodule.main.MainViewModel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.dimensionResource
+import com.example.thermographicmodule.R
 
 
 private const val TAG = "DebugScreen"
@@ -38,8 +40,9 @@ fun DebugScreen(viewModel: MainViewModel){
             Text("Очистить логи")
 
         }
-        Column(modifier=Modifier.verticalScroll(rememberScrollState()).padding(8.dp)) {
-//            Text(viewModel.log)
+        Column(modifier=Modifier
+            .verticalScroll(rememberScrollState())
+            .padding(dimensionResource(R.dimen.padding_small))) {
             Text(viewModel.log)
         }
 

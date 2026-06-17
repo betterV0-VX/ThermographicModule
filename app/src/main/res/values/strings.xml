@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">ThermographicModule</string>
+    <string name="histogram_name">ГИСТОГРАММА</string>
+    <string name="brightness_name">ЯРКОСТЬ</string>
+    <string name="gain_name">УСИЛЕНИЕ</string>
+    <string name="open_joystick">Открыть джойстик</string>
+    <string name="close_joystick">Закрыть джойстик</string>
 </resources>

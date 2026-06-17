@@ -2,6 +2,8 @@ package com.example.thermographicmodule.ui.controls
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
@@ -33,6 +36,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,12 +46,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -58,6 +69,7 @@ import com.example.thermographicmodule.data.SectionIsChosen
 import com.example.thermographicmodule.data.SectionType
 import com.example.thermographicmodule.main.MobileScreen
 import com.example.thermographicmodule.ui.theme.ThermographicModuleTheme
+import kotlinx.coroutines.delay
 
 
 @Composable
@@ -75,10 +87,37 @@ fun MessageToUser(@DrawableRes iconResId: Int, message: String, color: Color) {
 }
 
 @Composable
-fun ParameterControl(label: String, isChosen: Boolean,  onChosenParameterChange: () -> Unit, value: Int, onValueChange: (String) -> Unit, onSend: () -> Unit) {
+fun ParameterControl(label: String,
+                     isChosen: Boolean,
+                     onFocusChange: () -> Unit,
+                     onChosenParameterChange: () -> Unit,
+                     value: Int,
+                     onValueChange: (String) -> Unit,
+                     focusManager: FocusManager) {
+
+    val focusRequester = remember { FocusRequester() }
+    var shouldFocus by remember { mutableStateOf(false) }
+
+    // Запрашиваем фокус только по команде извне
+    LaunchedEffect(shouldFocus) {
+        if (shouldFocus && isChosen) {
+            delay(100)
+            focusRequester.requestFocus()
+            shouldFocus = false
+        }
+    }
+
     Card(
         modifier = Modifier
-            .clickable(onClick = onChosenParameterChange)
+            .clickable(onClick = {
+                if (isChosen) {
+                    shouldFocus = true
+                } else {
+                    onChosenParameterChange()
+                    focusManager.clearFocus()
+                    shouldFocus = false
+                }
+            })
             .then(
                 if (isChosen) {
                     Modifier.drawBehind {
@@ -128,14 +167,34 @@ fun ParameterControl(label: String, isChosen: Boolean,  onChosenParameterChange:
                 onValueChange = onValueChange,
                 modifier = Modifier
                     .height(52.dp)
-                    .width(90.dp),
+                    .width(90.dp)
+                    .focusRequester(focusRequester)
+                    // Ключевой момент: отключаем фокус через взаимодействие
+                    .focusable(
+                        false,
+                        interactionSource = remember { MutableInteractionSource() }
+                    )
+                    .onFocusChanged { focusState ->
+                        if (focusState.isFocused){
+                            onFocusChange()
+                        }
+                    },
                 textStyle = LocalTextStyle.current.copy(
                     textAlign = TextAlign.Center,
                     fontSize = 14.sp
                 ),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        focusManager.clearFocus()
+                    }
+                ),
                 singleLine = true,
-                shape = RoundedCornerShape(4.dp)
+                shape = RoundedCornerShape(4.dp),
+                enabled = isChosen // Активно только когда выбрано
             )
         }
     }
@@ -395,8 +454,7 @@ fun ToggleButton(state: Boolean,
 }
 
 @Composable
-fun CompoundSlider(parameterName: String, initialValue: Int, onValueChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float>){
-    var sliderPosition by remember { mutableStateOf(1f)}
+fun CompoundSlider(parameterName: String, initialValue: Int, onValueChange: (Float) -> Unit, onSetDefaultValue: ()-> Unit, range: ClosedFloatingPointRange<Float>){
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -420,7 +478,10 @@ fun CompoundSlider(parameterName: String, initialValue: Int, onValueChange: (Flo
                 Icon(
                     painter = painterResource(resId),
                     contentDescription = null,
-                    modifier = Modifier.padding(top = 20.dp, start = 16.dp).size(30.dp),
+                    modifier = Modifier
+                        .padding(top = 20.dp, start = 16.dp)
+                        .size(30.dp)
+                        .clickable(true, onClick = { onSetDefaultValue() }),
                     tint = Color(0xffB0C6FF)
                 )
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -436,7 +497,7 @@ fun CompoundSlider(parameterName: String, initialValue: Int, onValueChange: (Flo
                         ),
                         modifier = Modifier
                             .height(70.dp)
-                            .padding(end = 24.dp, start = 16.dp, top = 8.dp, bottom = 8.dp)
+                            .padding(end = 24.dp, start = 16.dp, top = 8.dp, bottom = 4.dp)
                     )
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,

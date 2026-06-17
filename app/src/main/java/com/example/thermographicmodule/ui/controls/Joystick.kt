@@ -23,7 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-
+import androidx.compose.ui.graphics.PathEffect.Companion.dashPathEffect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -45,7 +45,6 @@ fun JoystickPanel(
         modifier = modifier
             .fillMaxWidth()
             .height(250.dp)
-//            .fillMaxHeight(0.4f)
             .background(Color(0xff33343A))
             .padding(16.dp)
     ) {
@@ -105,7 +104,7 @@ fun SimpleJoystick() {
             Box(
                 modifier = Modifier
                     .size(joystickSize)
-                    .background(Color(0xff4F515C)/*Color.Gray.copy(alpha = 1f)*/, CircleShape)
+                    .background(Color(0xff4F515C), CircleShape)
                     .pointerInput(Unit) {
                         detectDragGestures(
                             onDrag = { change, dragAmount ->
@@ -125,25 +124,24 @@ fun SimpleJoystick() {
                 Canvas(modifier = Modifier.matchParentSize()) {
                     val centerX = size.width / 2
                     val centerY = size.height / 2
-                    // Рисуем пунктирную горизонтальную линию
+
                     drawLine(
                         color = Color(0xffB0C6FF),//Color.White.copy(alpha = 0.5f),
                         start = Offset(0f, centerY),
                         end = Offset(size.width, centerY),
                         strokeWidth = 2f,
-                        pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
+                        pathEffect = dashPathEffect(
                             intervals = floatArrayOf(12f, 12f),
                             phase = 0f
                         )
                     )
 
-                    // Рисуем пунктирную вертикальную линию
                     drawLine(
-                        color = Color(0xffB0C6FF),//Color.White.copy(alpha = 0.5f),
+                        color = Color(0xffB0C6FF),
                         start = Offset(centerX, 0f),
                         end = Offset(centerX, size.height),
                         strokeWidth = 2f,
-                        pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
+                        pathEffect = dashPathEffect(
                             intervals = floatArrayOf(12f, 12f),
                             phase = 0f
                         )
@@ -157,14 +155,7 @@ fun SimpleJoystick() {
                 }
             }
         }
-//        Spacer(modifier = Modifier.height(16.dp))
-////        // Вывод координат
-//        Text(
-//            text = "(X: ${"%.1f".format(offsetX)}, Y: ${"%.1f".format(offsetY)})",
-//            fontSize = 14.sp,
-//            fontWeight = FontWeight.Light,
-//            color = Color(0xffB0C6FF)
-//        )
+
 //
 //        // Нормализованные координаты (-1 до 1)
 //        val normX = (offsetX / maxRadius).coerceIn(-1f, 1f)

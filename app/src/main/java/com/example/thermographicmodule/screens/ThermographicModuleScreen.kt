@@ -42,7 +42,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.thermographicmodule.R
@@ -60,6 +63,9 @@ import com.example.thermographicmodule.ui.controls.SwitchModuleTurnOn
 import com.example.thermographicmodule.ui.controls.ToggleButton
 import com.example.thermographicmodule.ui.controls.ToggleContinuousButton
 import com.example.thermographicmodule.ui.controls.ZoomSection
+import com.example.thermographicmodule.Constants.HISTOGRAM_NAME
+import com.example.thermographicmodule.Constants.GAIN_NAME
+import com.example.thermographicmodule.Constants.BRIGHTNESS_NAME
 
 private const val TAG = "ThermographicModuleScreen"
 
@@ -71,21 +77,16 @@ fun ThermographicModuleScreen(viewModel: MainViewModel){
     val chosenSections = viewModel.sectionIsChosen.collectAsState()
     val chosenParameter = viewModel.parameterIsChosen.collectAsState()
 
+    val focusManager = LocalFocusManager.current
+
     var joystickX by remember { mutableStateOf(0f) }
     var joystickY by remember { mutableStateOf(0f) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-//        Column(
-//            modifier = Modifier
-//                .fillMaxSize()
-//                // Убираем нижний отступ, если джойстик виден
-//                .padding(bottom = if (viewModel.joystickIsVisible) 0.dp else 0.dp)
-//        ) {
             Column(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.verticalScroll(rememberScrollState())
-//                modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())
             ) {
                 Row {
                     SwitchModuleTurnOn(
@@ -94,20 +95,25 @@ fun ThermographicModuleScreen(viewModel: MainViewModel){
                         viewModel.messageToUser
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_small)))
                 HorizontalDivider(Modifier.height(10.dp))
                 Text(
                     "Параметры", color = Color.LightGray,
                     fontWeight = FontWeight.Light,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, end = 8.dp, bottom = 4.dp)
+                        .padding(
+                            start = 16.dp,
+                            end = dimensionResource(R.dimen.padding_small),
+                            bottom = 4.dp
+                        )
                 )
+
 
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
+                        .padding(horizontal = dimensionResource(R.dimen.padding_small))
                 ) {
                     LazyRow(
                         modifier = Modifier
@@ -120,51 +126,57 @@ fun ThermographicModuleScreen(viewModel: MainViewModel){
                     ) {
                         item {
                             ParameterControl(
-                                "ГИСТОГРАММА",
+                                stringResource(R.string.histogram_name),
                                 isChosen = chosenParameter.value.histogramIsChosen,
-                                { viewModel.setParameterForSlider("ГИСТОГРАММА") },
+                                { viewModel.setParameterForSlider(HISTOGRAM_NAME) },
+                                { viewModel.setParameterForSlider(HISTOGRAM_NAME) },
                                 viewModel.histogram,
                                 viewModel::setHistogram,
-                                viewModel::sendHistogram
+                                focusManager
+
                             )
                         }
                         item {
                             ParameterControl(
-                                "ЯРКОСТЬ",
+                                stringResource(R.string.brightness_name),
                                 isChosen = chosenParameter.value.brightnessIsChosen,
-                                { viewModel.setParameterForSlider("ЯРКОСТЬ") },
+                                { viewModel.setParameterForSlider(BRIGHTNESS_NAME) },
+                                { viewModel.setParameterForSlider(BRIGHTNESS_NAME) },
                                 viewModel.brightness,
                                 viewModel::setBrightness,
-                                viewModel::sendBrightness
+                                focusManager
                             )
                         }
                         item {
                             ParameterControl(
-                                "УСИЛЕНИЕ",
+                                stringResource(R.string.gain_name),
                                 isChosen = chosenParameter.value.gainIsChosen,
-                                { viewModel.setParameterForSlider("УСИЛЕНИЕ") },
+                                { viewModel.setParameterForSlider(GAIN_NAME) },
+                                { viewModel.setParameterForSlider(GAIN_NAME) },
                                 viewModel.gain,
                                 viewModel::setGain,
-                                viewModel::sendGain
+                                focusManager
                             )
                         }
                     }
                 }
 
+
                 CompoundSlider(
                     viewModel.currentParameterForSlider,
                     viewModel.getParameterForSlider(),
                     viewModel::onValueChangeForSlider,
+                    viewModel::setDefaultParameter,
                     0f..254f
                 )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(
-                        8.dp,
+                        dimensionResource(R.dimen.padding_small),
                         Alignment.CenterHorizontally
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
+                        .padding(horizontal = dimensionResource(R.dimen.padding_small))
                 ) {
                     ToggleContinuousButton(
                         viewModel.continuousSending,
@@ -211,17 +223,20 @@ fun ThermographicModuleScreen(viewModel: MainViewModel){
                     fontWeight = FontWeight.Light,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, end = 8.dp)
+                        .padding(start = 16.dp, end = dimensionResource(R.dimen.padding_small))
                 )
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
+                        .padding(horizontal = dimensionResource(R.dimen.padding_small))
                 ) {
                     SectionCarousel(chosenSections.value, items, viewModel::setSectionIsChosen)
                 }
                 Card(
-                    modifier = Modifier.padding(start = 8.dp, end = 8.dp),
+                    modifier = Modifier
+                        .padding(
+                            start =dimensionResource(R.dimen.padding_small),
+                            end = dimensionResource(R.dimen.padding_small)),
                     shape = RoundedCornerShape(
                         topEnd = 12.dp,
                         topStart = 0.dp,
@@ -243,7 +258,7 @@ fun ThermographicModuleScreen(viewModel: MainViewModel){
                     fontWeight = FontWeight.Light,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, end = 8.dp)
+                        .padding(start = 16.dp, end = dimensionResource(R.dimen.padding_small))
                 )
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -251,7 +266,7 @@ fun ThermographicModuleScreen(viewModel: MainViewModel){
                         start = 20.dp,
                         end = 20.dp,
                         bottom = 20.dp,
-                        top = 8.dp
+                        top = dimensionResource(R.dimen.padding_small)
                     )
                 ) {
                     item {
@@ -259,7 +274,7 @@ fun ThermographicModuleScreen(viewModel: MainViewModel){
                             onClick = viewModel::startBlindCalibration,
                             shape = RoundedCornerShape(4.dp),
                             modifier = Modifier.size(128.dp, 54.dp),
-                            contentPadding = PaddingValues(8.dp),
+                            contentPadding = PaddingValues(dimensionResource(R.dimen.padding_small)),
                             colors = ButtonDefaults.filledTonalButtonColors()
                         ) {
                             Text("Калибровка по шторке")
@@ -270,7 +285,7 @@ fun ThermographicModuleScreen(viewModel: MainViewModel){
                             onClick = viewModel::startCapCalibration,
                             shape = RoundedCornerShape(4.dp),
                             modifier = Modifier.size(128.dp, 54.dp),
-                            contentPadding = PaddingValues(8.dp),
+                            contentPadding = PaddingValues(dimensionResource(R.dimen.padding_small)),
                             colors = ButtonDefaults.filledTonalButtonColors()
                         ) {
                             Text("Калибровка по крышке")
@@ -281,7 +296,7 @@ fun ThermographicModuleScreen(viewModel: MainViewModel){
                             onClick = viewModel::findDefectPixels,
                             shape = RoundedCornerShape(4.dp),
                             modifier = Modifier.size(128.dp, 54.dp),
-                            contentPadding = PaddingValues(8.dp),
+                            contentPadding = PaddingValues(dimensionResource(R.dimen.padding_small)),
                             colors = ButtonDefaults.filledTonalButtonColors()
                         ) {
                             Text("Нахождение битых пикселей")
@@ -293,16 +308,19 @@ fun ThermographicModuleScreen(viewModel: MainViewModel){
                     fontWeight = FontWeight.Light,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, end = 8.dp)
+                        .padding(start = 16.dp, end = dimensionResource(R.dimen.padding_small))
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Card(modifier = Modifier.padding(start = 8.dp, end = 8.dp)) {
+                Card(modifier = Modifier
+                    .padding(
+                        start = dimensionResource(R.dimen.padding_small),
+                        end = dimensionResource(R.dimen.padding_small))) {
                     FlowRow(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.padding_small))
                     ) {
                         ToggleButton(
                             modes.value.waiting, "Режим ожидания",

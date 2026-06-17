@@ -1,5 +1,6 @@
 package com.example.thermographicmodule.main
 
+
 import android.annotation.SuppressLint
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
@@ -39,9 +40,17 @@ import com.example.thermographicmodule.ui.theme.ThermographicModuleTheme
 
 
 sealed class Screen(val route: String, val title: String, val  iconId: Int) {
-    object Camera : Screen("Тепловизор", "Тепловизор", R.drawable.camera_video_24px)
-    object Motors : Screen("НТМ Модуль", "НТМ Модуль", R.drawable.motion_sensor_active_24px)
-    object Debug : Screen("Отладка", "Отладка", R.drawable.developer_mode_tv_24px)
+    companion object {
+        private const val THERMOGRAPHIC_MODULE_ROUTE = "Тепловизор"
+        private const val THERMOGRAPHIC_MODULE_TITLE = "Тепловизор"
+        private const val NTM_MODULE_ROUTE = "НТМ Модуль"
+        private const val NTM_MODULE_TITLE = "НТМ Модуль"
+        private const val DEBUG_ROUTE = "Отладка"
+        private const val DEBUG_TITLE = "Отладка"
+    }
+    object Camera : Screen(THERMOGRAPHIC_MODULE_ROUTE, THERMOGRAPHIC_MODULE_TITLE, R.drawable.camera_video_24px)
+    object Motors : Screen(NTM_MODULE_ROUTE, NTM_MODULE_TITLE, R.drawable.motion_sensor_active_24px)
+    object Debug : Screen(DEBUG_ROUTE, DEBUG_TITLE, R.drawable.developer_mode_tv_24px)
 }
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -71,7 +80,7 @@ fun MobileScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                 },
 
                 actions = {
-                    if (currentRoute.toString() != "Отладка"){
+                    if (currentRoute.toString() != Screen.Debug.route){
                         if (viewModel.currentConnectedComPortNumber != -1){
                             TextButton(
                                 onClick = {
@@ -117,10 +126,15 @@ fun MobileScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { viewModel.joystickIsVisible = !viewModel.joystickIsVisible},
+                onClick = viewModel::toggleJoystickIsVisible,
                 shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.padding(0.dp)
-                    .then(if (viewModel.joystickIsVisible) { Modifier.size(30.dp) } else Modifier) ,
+                modifier = Modifier
+                    .padding(0.dp)
+                    .then(
+                        if (viewModel.joystickIsVisible) {
+                            Modifier.size(48.dp)
+                        } else Modifier
+                    ) ,
                 containerColor = if (!viewModel.joystickIsVisible) { MaterialTheme.colorScheme.primaryContainer } else {
                     Color(0xff21222B)
                 },
@@ -132,7 +146,11 @@ fun MobileScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                     painter = if (!viewModel.joystickIsVisible) { painterResource(R.drawable.outline_joystick_24) } else {
                         painterResource(R.drawable.outline_close_24)
                     },
-                    contentDescription = if (!viewModel.joystickIsVisible) { "Открыть джойстик"} else {"Закрыть джойстик"},
+                    contentDescription = if (!viewModel.joystickIsVisible) {
+                        stringResource(R.string.open_joystick)
+                    } else {
+                        stringResource(R.string.close_joystick)
+                    },
                     modifier = Modifier.then(if (viewModel.joystickIsVisible) { Modifier.size(24.dp) } else Modifier.size(32.dp))
                 )
             }
@@ -183,7 +201,9 @@ fun MobileScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                         items(availableDevices) { device ->
                             Card(
                                 border = BorderStroke(width = 1.dp, color = Color.Gray),
-                                modifier = Modifier.fillMaxWidth().padding(4.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(4.dp)
                             ) {
                                 Column(modifier = Modifier.padding(8.dp)) {
                                     Text(
