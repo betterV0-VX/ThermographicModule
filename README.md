@@ -8,6 +8,13 @@
   
 
 ## Тепловизор
-  Приложение, не подключенное к устройству выглядит в данный момент следующим образом:
-  
+  #### Приложение, не подключенное к устройству выглядит в данный момент следующим образом:
+  <p align="center">
+    <img src="not_connected_1.jpg" alt="Скриншот 1" width="250" style="margin: 20px;">
+    <img src="not_connected_2.jpg" alt="Скриншот 2" width="250" style="margin: 20px;">
+    <img src="not_connected_3.jpg" alt="Скриншот 3" width="250" style="margin: 20px;">
+    <img src="not_connected_4.jpg" alt="Скриншот 4" width="250" style="margin: 20px;">
+    <img src="debug_console.jpg" alt="Консоль для отладки" width="250" style="margin: 20px;">
+  </p>
+
   
